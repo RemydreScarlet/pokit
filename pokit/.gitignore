@@ -1,0 +1,23 @@
+# Chisel / SBT / Scala
+target/
+project/target/
+project/project/
+.bloop/
+.metals/
+.idea/
+.vscode/
+.worksheet/
+*.class
+*.log
+.cache
+.history
+
+# OS / Editor
+.DS_Store
+.Trash/
+*~
+*.swp
+
+# Build tool caches
+.ivy2/
+.sbt/
