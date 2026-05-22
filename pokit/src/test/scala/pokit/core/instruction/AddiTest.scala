@@ -13,7 +13,13 @@ class AddiTest extends AnyFlatSpec with ChiselScalatestTester {
             // ADDI x1, x0, 10 -> 0x00A00093
             val instr = "h00A00093".U
             dut.io.instr.poke(instr)
+            
+            // パイプラインを流す
             dut.clock.step(6)
+            
+            // 検証: x1 (reg1) に 10 が入っているか
+            dut.io.dbgRegAddr.poke(1.U)
+            dut.io.dbgRegData.expect(10.U)
         }
     }
 }

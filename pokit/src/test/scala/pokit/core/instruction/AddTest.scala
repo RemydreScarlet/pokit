@@ -9,14 +9,25 @@ class AddTest extends AnyFlatSpec with ChiselScalatestTester {
     "ADD instruction" should "add two register values" in {
         test(new Pipeline) { dut =>
             dut.io.branchValid.poke(false.B)
+            dut.io.initRegWen.poke(true.B)
+            
+            // x2 = 10, x3 = 20
+            dut.io.initRegAddr.poke(2.U)
+            dut.io.initRegData.poke(10.U)
+            dut.clock.step()
+            dut.io.initRegAddr.poke(3.U)
+            dut.io.initRegData.poke(20.U)
+            dut.clock.step()
+            dut.io.initRegWen.poke(false.B)
             
             // ADD x1, x2, x3 -> 0x003100b3
-            // 前準備: RegFileに値を書く必要があるが、
-            // 統合テストでは複雑になるため、ここでは命令の動作のみ確認。
-            // 本来はレジスタ初期化用のポートを設けるのがベスト。
             val instr = "h003100b3".U
             dut.io.instr.poke(instr)
+            
             dut.clock.step(6)
+            
+            dut.io.dbgRegAddr.poke(1.U)
+            dut.io.dbgRegData.expect(30.U)
         }
     }
 }

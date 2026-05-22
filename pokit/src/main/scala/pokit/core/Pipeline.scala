@@ -9,6 +9,14 @@ class Pipeline extends Module {
         val instr = Input(UInt(32.W)) // テスト用: 命令注入
         val branchPC = Input(UInt(32.W))
         val branchValid = Input(Bool())
+        
+        // 追加: レジスタ検証用デバッグポート
+        val dbgRegAddr = Input(UInt(6.W))
+        val dbgRegData = Output(UInt(32.W))
+        // 追加: レジスタ初期化用
+        val initRegWen = Input(Bool())
+        val initRegAddr = Input(UInt(6.W))
+        val initRegData = Input(UInt(32.W))
     })
 
     val ifStage = Module(new IF)
@@ -31,6 +39,13 @@ class Pipeline extends Module {
     regFile.io.rAddr2 := idStage.io.rAddr2
     idStage.io.rData1 := regFile.io.rData1
     idStage.io.rData2 := regFile.io.rData2
+    
+    // Debug/Initポート接続
+    regFile.io.dbgAddr := io.dbgRegAddr
+    io.dbgRegData := regFile.io.dbgData
+    regFile.io.initWen := io.initRegWen
+    regFile.io.initAddr := io.initRegAddr
+    regFile.io.initData := io.initRegData
     
     // ID -> IDEXReg
     idexReg.io.inRs1 := idStage.io.rs1
