@@ -2,21 +2,25 @@ package pokit.core.stage
 
 import chisel3._
 import chisel3.util._
+import pokit.core._
 
 class EXIO extends Bundle {
     val rs1 = Input(UInt(32.W))
     val rs2 = Input(UInt(32.W))
-    val aluOp = Input(UInt(3.W)) // 命令の種類を識別する信号
+    val imm = Input(UInt(32.W))
+    val ctrl = Input(new ControlBundle)
     val aluOut = Output(UInt(32.W))
 }
 
 class EX extends Module {
     val io = IO(new EXIO)
     
-    // 仮のALU: aluOp 0=ADD, 1=SUB, 2=AND
+    // ALUのオペランド選択
+    val op2 = Mux(io.ctrl.aluSrc, io.imm, io.rs2)
+    
+    // 仮のALU: aluOp 0=ADD, 1=SUB
     io.aluOut := MuxCase(0.U, Seq(
-        (io.aluOp === 0.U) -> (io.rs1 + io.rs2),
-        (io.aluOp === 1.U) -> (io.rs1 - io.rs2),
-        (io.aluOp === 2.U) -> (io.rs1 & io.rs2)
+        (io.ctrl.aluOp === 0.U) -> (io.rs1 + op2),
+        (io.ctrl.aluOp === 1.U) -> (io.rs1 - op2)
     ))
 }
