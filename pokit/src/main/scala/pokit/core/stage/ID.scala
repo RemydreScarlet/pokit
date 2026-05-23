@@ -58,20 +58,33 @@ class ID extends Module {
     io.imm := immI
 
     switch(opcode) {
-        is("b0110011".U) { // R-type
+        is("b0110011".U) { // R-type (RV32I + M-extension)
             io.ctrl.regWrite := true.B
-            when(funct3 === "b000".U) {
-                io.ctrl.aluOp := Mux(instr(30), 1.U, 0.U)
+            when(instr(25)) { // M-extension (funct7[5] = 1)
+                switch(funct3) {
+                    is("b000".U) { io.ctrl.aluOp := 16.U } // MUL
+                    is("b001".U) { io.ctrl.aluOp := 17.U } // MULH
+                    is("b010".U) { io.ctrl.aluOp := 18.U } // MULHSU
+                    is("b011".U) { io.ctrl.aluOp := 19.U } // MULHU
+                    is("b100".U) { io.ctrl.aluOp := 20.U } // DIV
+                    is("b101".U) { io.ctrl.aluOp := 21.U } // DIVU
+                    is("b110".U) { io.ctrl.aluOp := 22.U } // REM
+                    is("b111".U) { io.ctrl.aluOp := 23.U } // REMU
+                }
+            }.otherwise { // RV32I R-type
+                when(funct3 === "b000".U) {
+                    io.ctrl.aluOp := Mux(instr(30), 1.U, 0.U)
+                }
+                when(funct3 === "b001".U) { io.ctrl.aluOp := 2.U }
+                when(funct3 === "b010".U) { io.ctrl.aluOp := 3.U }
+                when(funct3 === "b011".U) { io.ctrl.aluOp := 4.U }
+                when(funct3 === "b100".U) { io.ctrl.aluOp := 5.U }
+                when(funct3 === "b101".U) {
+                    io.ctrl.aluOp := Mux(instr(30), 6.U | 8.U, 6.U)
+                }
+                when(funct3 === "b110".U) { io.ctrl.aluOp := 7.U }
+                when(funct3 === "b111".U) { io.ctrl.aluOp := 8.U }
             }
-            when(funct3 === "b001".U) { io.ctrl.aluOp := 2.U }
-            when(funct3 === "b010".U) { io.ctrl.aluOp := 3.U }
-            when(funct3 === "b011".U) { io.ctrl.aluOp := 4.U }
-            when(funct3 === "b100".U) { io.ctrl.aluOp := 5.U }
-            when(funct3 === "b101".U) {
-                io.ctrl.aluOp := Mux(instr(30), 6.U | 8.U, 6.U)
-            }
-            when(funct3 === "b110".U) { io.ctrl.aluOp := 7.U }
-            when(funct3 === "b111".U) { io.ctrl.aluOp := 8.U }
         }
         is("b0010011".U) { // I-type (arithmetic)
             io.ctrl.regWrite := true.B

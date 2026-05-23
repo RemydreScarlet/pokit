@@ -61,7 +61,7 @@ class RISCVTest extends AnyFlatSpec with ChiselScalatestTester {
     )
 
     val memFiles = new File(testBinDir).listFiles
-        .filter(f => f.getName.endsWith(".mem") && f.getName.startsWith("rv32ui-p-"))
+        .filter(f => f.getName.endsWith(".mem") && (f.getName.startsWith("rv32ui-p-") || f.getName.startsWith("rv32um-p-")))
         .sortBy(_.getName)
 
     for (memFile <- memFiles) {

@@ -69,6 +69,23 @@ class EX extends Module {
 
     val shamt = op2(4, 0)
 
+    // M-extension: multiplier
+    val mulFull = fwdRs1 * op2
+    val mulhFull = fwdRs1.asSInt * op2.asSInt
+    val mulhuHi = mulFull(63, 32)
+    val mulhsuCorr = Mux(fwdRs1(31), op2, 0.U)
+    val mulhsuResult = mulhuHi - mulhsuCorr
+
+    // M-extension: divider (edge cases: x/0=-1, INT_MIN/-1=INT_MIN, x%0=x, INT_MIN%-1=0)
+    val divSigned = Mux(op2 === 0.U, "hFFFFFFFF".U,
+        Mux(fwdRs1 === "h80000000".U && op2 === "hFFFFFFFF".U, "h80000000".U,
+            (fwdRs1.asSInt / op2.asSInt).asUInt))
+    val divUnsigned = Mux(op2 === 0.U, "hFFFFFFFF".U, fwdRs1 / op2)
+    val remSigned = Mux(op2 === 0.U, fwdRs1,
+        Mux(fwdRs1 === "h80000000".U && op2 === "hFFFFFFFF".U, 0.U,
+            (fwdRs1.asSInt % op2.asSInt).asUInt))
+    val remUnsigned = Mux(op2 === 0.U, fwdRs1, fwdRs1 % op2)
+
     val aluOut = Wire(UInt(32.W))
     aluOut := MuxLookup(io.ctrl.aluOp, 0.U)(Seq(
         0.U -> (fwdRs1 + op2),
@@ -83,7 +100,15 @@ class EX extends Module {
         9.U -> io.imm,
         10.U -> (io.pc + io.imm),
         11.U -> (io.pc + 4.U),
-        14.U -> Mux(io.ctrl.aluOp(3), (fwdRs1.asSInt >> shamt).asUInt, (fwdRs1 >> shamt))
+        14.U -> Mux(io.ctrl.aluOp(3), (fwdRs1.asSInt >> shamt).asUInt, (fwdRs1 >> shamt)),
+        16.U -> mulFull(31, 0),
+        17.U -> mulhFull(63, 32).asUInt,
+        18.U -> mulhsuResult,
+        19.U -> mulhuHi,
+        20.U -> divSigned,
+        21.U -> divUnsigned,
+        22.U -> remSigned,
+        23.U -> remUnsigned
     ))
 
     io.fwdRs2Out := fwdRs2
