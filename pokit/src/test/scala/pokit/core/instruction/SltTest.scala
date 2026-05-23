@@ -8,6 +8,7 @@ import pokit.core.Pipeline
 class SltTest extends AnyFlatSpec with ChiselScalatestTester {
     "SLT instruction" should "work" in {
         test(new Pipeline) { dut =>
+            dut.io.testMode.poke(true.B)
             dut.io.branchValid.poke(false.B)
             dut.io.initRegWen.poke(true.B)
             

@@ -7,6 +7,7 @@ import pokit.core.stage.register._
 class Pipeline extends Module {
     val io = IO(new Bundle {
         val instr = Input(UInt(32.W)) // テスト用: 命令注入
+        val testMode = Input(Bool()) // 追加: テストモード
         val branchPC = Input(UInt(32.W))
         val branchValid = Input(Bool())
         
@@ -27,9 +28,16 @@ class Pipeline extends Module {
     val memStage = Module(new MEM)
     val wbStage = Module(new WB)
     val regFile = Module(new RegFile)
+    
+    // 追加: メモリモジュール
+    val imem = Module(new IMem(4096))
+    val dmem = Module(new DMem(4096))
 
     // IF -> ID
-    ifStage.io.instr := io.instr 
+    // 命令メモリへの接続
+    imem.io.addr := ifStage.io.pc
+    ifStage.io.instr := Mux(io.testMode, io.instr, imem.io.instr)
+    
     ifStage.io.branchPC := io.branchPC
     ifStage.io.branchValid := io.branchValid
     idStage.io.instrIn := ifStage.io.instrOut
@@ -76,9 +84,12 @@ class Pipeline extends Module {
     memStage.io.aluOut := exmemReg.io.outAluOut
     memStage.io.rs2 := exmemReg.io.outRs2
     memStage.io.ctrl := exmemReg.io.outCtrl
-    // 外部メモリとの接続口（仮）
-    // TODO: メモリ自体は別モジュールとする
-    memStage.io.memRData := 0.U 
+    
+    // メモリ接続
+    dmem.io.addr := memStage.io.memAddr
+    dmem.io.wData := memStage.io.memWData
+    dmem.io.wen := memStage.io.memWen
+    memStage.io.memRData := dmem.io.rData
     
     wbStage.io.aluOut := memStage.io.memOut
     wbStage.io.rd := exmemReg.io.outRd

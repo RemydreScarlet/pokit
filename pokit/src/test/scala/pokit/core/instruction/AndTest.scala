@@ -8,6 +8,7 @@ import pokit.core.Pipeline
 class AndTest extends AnyFlatSpec with ChiselScalatestTester {
     "AND instruction" should "work" in {
         test(new Pipeline) { dut =>
+            dut.io.testMode.poke(true.B)
             dut.io.branchValid.poke(false.B)
             dut.io.initRegWen.poke(true.B)
             

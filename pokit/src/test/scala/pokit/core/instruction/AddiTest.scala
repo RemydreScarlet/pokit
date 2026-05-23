@@ -8,6 +8,7 @@ import pokit.core.Pipeline
 class AddiTest extends AnyFlatSpec with ChiselScalatestTester {
     "ADDI instruction" should "add immediate to register" in {
         test(new Pipeline) { dut =>
+            dut.io.testMode.poke(true.B)
             dut.io.branchValid.poke(false.B)
             
             // ADDI x1, x0, 10 -> 0x00A00093
