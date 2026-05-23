@@ -53,20 +53,33 @@ class Pipeline extends Module {
     idexReg.io.inImm := idStage.io.imm
     idexReg.io.inCtrl := idStage.io.ctrl
     idexReg.io.inRd := idStage.io.rd
+    idexReg.io.inPc := idStage.io.instrIn.pc // IFから渡されたPCをEXへ渡す
     
     // IDEXReg -> EX
+    exStage.io.pc := idexReg.io.outPc
     exStage.io.rs1 := idexReg.io.outRs1
     exStage.io.rs2 := idexReg.io.outRs2
     exStage.io.imm := idexReg.io.outImm
     exStage.io.ctrl := idexReg.io.outCtrl
+
+    // IFへの分岐信号
+    ifStage.io.branchPC := exStage.io.branchTarget
+    ifStage.io.branchValid := exStage.io.branchTaken
     
     // EX -> EXMEMReg
     exmemReg.io.inAluOut := exStage.io.aluOut
+    exmemReg.io.inRs2 := idexReg.io.outRs2
     exmemReg.io.inRd := idexReg.io.outRd
     exmemReg.io.inCtrl := idexReg.io.outCtrl
     
     // EXMEMReg -> MEM -> WB
     memStage.io.aluOut := exmemReg.io.outAluOut
+    memStage.io.rs2 := exmemReg.io.outRs2
+    memStage.io.ctrl := exmemReg.io.outCtrl
+    // 外部メモリとの接続口（仮）
+    // TODO: メモリ自体は別モジュールとする
+    memStage.io.memRData := 0.U 
+    
     wbStage.io.aluOut := memStage.io.memOut
     wbStage.io.rd := exmemReg.io.outRd
     wbStage.io.ctrl := exmemReg.io.outCtrl

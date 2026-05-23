@@ -37,10 +37,26 @@ class ID extends Module {
     // 即値抽出 (I-type: [31:20])
     io.imm := Cat(Fill(20, io.instrIn.instr(31)), io.instrIn.instr(31, 20))
 
-    // 制御信号デコード
-    io.ctrl.regWrite := (opcode === "b0110011".U || opcode === "b0010011".U)
-    io.ctrl.aluSrc := (opcode === "b0010011".U) // I-type
-    
-    // ALU操作信号 (ADD=0, SUB=1)
-    io.ctrl.aluOp := Mux(opcode === "b0110011".U && funct3 === "b000".U && io.instrIn.instr(30), 1.U, 0.U)
+    // 制御信号のデフォルト値
+    io.ctrl.regWrite := false.B
+    io.ctrl.aluSrc   := false.B
+    io.ctrl.memRead  := false.B
+    io.ctrl.memWrite := false.B
+    io.ctrl.memToReg := false.B
+    io.ctrl.branch   := false.B
+    io.ctrl.jump     := false.B
+    io.ctrl.aluOp    := 0.U
+
+    switch(opcode) {
+        is("b0110011".U) { // R-type
+            io.ctrl.regWrite := true.B
+            // ALU操作 (ADD:0, SUB:1, ...)
+            io.ctrl.aluOp := Mux(funct3 === "b000".U && io.instrIn.instr(30), 1.U, 0.U)
+        }
+        is("b0010011".U) { // I-type (arithmetic)
+            io.ctrl.regWrite := true.B
+            io.ctrl.aluSrc   := true.B
+            io.ctrl.aluOp    := 0.U // Assuming ADD for now
+        }
+    }
 }
