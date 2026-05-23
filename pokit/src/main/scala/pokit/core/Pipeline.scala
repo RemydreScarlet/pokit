@@ -48,8 +48,8 @@ class Pipeline extends Module {
     val wbStage = Module(new WB)
     val regFile = Module(new RegFile)
 
-    val imem = Module(new IMem(4096))
-    val dmem = Module(new DMem(4096))
+    val imem = Module(new IMem(16384)) // 64KB (16384 words)
+    val dmem = Module(new DMem(16384)) // 64KB (16384 words)
 
     ifStage.io.singleThread := io.singleThread
 
