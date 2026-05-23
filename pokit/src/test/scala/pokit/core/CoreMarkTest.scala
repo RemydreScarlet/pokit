@@ -11,7 +11,7 @@ class CoreMarkTest extends AnyFlatSpec with ChiselScalatestTester {
     val testBinDir = "/home/momoi/GitHub/pokit/pokit/test_binaries"
     val signatureAddr = 0x3FFC
     val printBufAddr = 0x3F00
-    val maxCycles = 100000000
+    val maxCycles = 100000000  // 100M timeout
 
     def loadMemBoth(dut: Pipeline, path: String): Unit = {
         val lines = Source.fromFile(path).getLines().toList
@@ -93,15 +93,40 @@ class CoreMarkTest extends AnyFlatSpec with ChiselScalatestTester {
             var cycles = 0
             var timeout = true
 
+            var totalRedirects = 0L
+            var totalInstructions = 0L
+            var lastProgressPc = BigInt(0)
+            var lastProgressCycle = 0
+
             for (i <- 0 until maxCycles if !done) {
                 dut.clock.step()
                 cycles += 1
 
-                if (i == 10000) {
-                    // Check that the CPU is making progress (PC non-zero)
-                    // by looking at a known memory location
+                val pc = dut.io.dbgPc.peek().litValue
+                totalInstructions += 1
+                if (dut.io.dbgRedirect.peek().litValue == 1) {
+                    totalRedirects += 1
+                }
+
+                if (pc != lastProgressPc) {
+                    lastProgressPc = pc
+                    lastProgressCycle = cycles
+                }
+                if (cycles - lastProgressCycle > 100000 && cycles > 100000) {
+                    println(f"  ** NO PC CHANGE in 100K cycles (stuck at 0x$lastProgressPc%08x) cycle=$cycles")
+                    lastProgressCycle = cycles
+                }
+
+                if (i > 0 && (i % 1000000 == 0)) {
+                    println(f"  @${i/1000000}M: PC=0x$pc%08x, redirects=$totalRedirects%d, last_progress=$lastProgressCycle")
+                }
+
+                if (i == 100000 || i == 1000000) {
+                    dut.io.dmemDbgAddr.poke(0x5800.U)
+                    val idx = dut.io.dmemDbgData.peek().litValue
                     dut.io.dmemDbgAddr.poke(0x3FFC.U)
-                    println(f"  @10k cycles: 0x3FFC = 0x${dut.io.dmemDbgData.peek().litValue}%x")
+                    val sig = dut.io.dmemDbgData.peek().litValue
+                    println(f"  @$i: 0x3FFC=0x$sig%x, print_buf_idx=$idx")
                 }
 
                 dut.io.dmemDbgAddr.poke(signatureAddr.U)

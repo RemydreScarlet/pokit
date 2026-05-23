@@ -16,6 +16,10 @@ class IF extends Module {
         val branchPC = Input(UInt(32.W))
         val branchValid = Input(Bool())
         val singleThread = Input(Bool())
+        val predictTaken = Input(Bool())
+        val predictTarget = Input(UInt(32.W))
+        val predOut = Output(Bool())
+        val predTargetOut = Output(UInt(32.W))
     })
 
     val pc0 = RegInit(0.U(32.W))
@@ -24,12 +28,14 @@ class IF extends Module {
 
     val actualThreadIdx = Mux(io.singleThread, 0.U, threadIdx)
 
+    val predictedNextPC = Mux(io.predictTaken, io.predictTarget, Mux(actualThreadIdx === 0.U, pc0, pc1) + 4.U)
+
     when(io.branchValid) {
         when(actualThreadIdx === 0.U) { pc0 := io.branchPC }
         .otherwise { pc1 := io.branchPC }
     }.otherwise {
-        when(actualThreadIdx === 0.U) { pc0 := pc0 + 4.U }
-        .otherwise { pc1 := pc1 + 4.U }
+        when(actualThreadIdx === 0.U) { pc0 := predictedNextPC }
+        .otherwise { pc1 := predictedNextPC }
     }
 
     threadIdx := Mux(io.singleThread, 0.U, ~threadIdx)
@@ -37,6 +43,8 @@ class IF extends Module {
     val currentPC = Mux(actualThreadIdx === 0.U, pc0, pc1)
 
     io.pc := currentPC
+    io.predOut := io.predictTaken
+    io.predTargetOut := io.predictTarget
     io.instrOut.instr := io.instr
     io.instrOut.threadIdx := actualThreadIdx
     io.instrOut.pc := currentPC

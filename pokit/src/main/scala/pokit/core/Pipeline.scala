@@ -37,6 +37,14 @@ class Pipeline extends Module {
         val dbgWbAddr = Output(UInt(6.W))
         val dbgWbData = Output(UInt(32.W))
         val dbgWbWen = Output(Bool())
+        val dbgPc = Output(UInt(32.W))
+        val dbgRedirect = Output(Bool())
+        val dbgBranchValid = Output(Bool())
+        val dbgBpuHit = Output(Bool())
+        val dbgRedirectMispred = Output(Bool())
+        val dbgRedirectFalsePos = Output(Bool())
+        val dbgRedirectTargetMis = Output(Bool())
+        val dbgRedirectJALR = Output(Bool())
     })
 
     val ifStage = Module(new IF)
@@ -50,6 +58,7 @@ class Pipeline extends Module {
 
     val imem = Module(new IMem(16384)) // 64KB (16384 words)
     val dmem = Module(new DMem(16384)) // 64KB (16384 words)
+    val bpu = Module(new BranchPredictor)
 
     ifStage.io.singleThread := io.singleThread
 
@@ -66,8 +75,12 @@ class Pipeline extends Module {
     imem.io.addr := ifStage.io.pc
     ifStage.io.instr := Mux(io.testMode, io.instr, imem.io.instr)
 
-    ifStage.io.branchPC := Mux(exStage.io.branchTaken, exStage.io.branchTarget, io.branchPC)
-    ifStage.io.branchValid := exStage.io.branchTaken || io.branchValid
+    bpu.io.lookupPC := ifStage.io.pc
+    ifStage.io.predictTaken := bpu.io.predictTaken
+    ifStage.io.predictTarget := bpu.io.predictTarget
+
+    ifStage.io.branchPC := Mux(exStage.io.redirectValid, exStage.io.redirectTarget, io.branchPC)
+    ifStage.io.branchValid := exStage.io.redirectValid || io.branchValid
     idStage.io.instrIn := ifStage.io.instrOut
 
     regFile.io.rAddr1 := idStage.io.rAddr1
@@ -89,8 +102,10 @@ class Pipeline extends Module {
     idexReg.io.inPc := idStage.io.instrIn.pc
     idexReg.io.inRs1Addr := idStage.io.rs1Addr
     idexReg.io.inRs2Addr := idStage.io.rs2Addr
+    idexReg.io.inPredTaken := ifStage.io.predOut
+    idexReg.io.inPredTarget := ifStage.io.predTargetOut
 
-    idexReg.io.flush := exStage.io.branchTaken || io.branchValid
+    idexReg.io.flush := exStage.io.redirectValid || io.branchValid
 
     exStage.io.pc := idexReg.io.outPc
     exStage.io.rs1 := idexReg.io.outRs1
@@ -99,6 +114,8 @@ class Pipeline extends Module {
     exStage.io.ctrl := idexReg.io.outCtrl
     exStage.io.rs1Addr := idexReg.io.outRs1Addr
     exStage.io.rs2Addr := idexReg.io.outRs2Addr
+    exStage.io.predTaken := idexReg.io.outPredTaken
+    exStage.io.predTarget := idexReg.io.outPredTarget
 
     exStage.io.exmemRd := exmemReg.io.outRd
     exStage.io.exmemAluOut := exmemReg.io.outAluOut
@@ -109,6 +126,11 @@ class Pipeline extends Module {
     exStage.io.wbRd := wbStage.io.fwdAddr
     exStage.io.wbData := wbStage.io.fwdData
     exStage.io.wbRegWrite := wbStage.io.fwdWen
+
+    bpu.io.updateValid := exStage.io.bpuUpdateValid
+    bpu.io.updatePC := exStage.io.bpuUpdatePC
+    bpu.io.updateTaken := exStage.io.bpuUpdateTaken
+    bpu.io.updateTarget := exStage.io.bpuUpdateTarget
 
     exmemReg.io.inAluOut := exStage.io.aluOut
     exmemReg.io.inRs2 := exStage.io.fwdRs2Out
@@ -142,4 +164,12 @@ class Pipeline extends Module {
     io.dbgWbAddr := wbStage.io.wAddr
     io.dbgWbData := wbStage.io.wData
     io.dbgWbWen := wbStage.io.wen
+    io.dbgPc := ifStage.io.instrOut.pc
+    io.dbgRedirect := exStage.io.redirectValid
+    io.dbgBranchValid := io.branchValid
+    io.dbgBpuHit := bpu.io.dbgHit
+    io.dbgRedirectMispred := exStage.io.dbgBranchMispred
+    io.dbgRedirectFalsePos := exStage.io.dbgFalsePositive
+    io.dbgRedirectTargetMis := exStage.io.dbgTargetMismatch
+    io.dbgRedirectJALR := exStage.io.dbgIsJALR
 }

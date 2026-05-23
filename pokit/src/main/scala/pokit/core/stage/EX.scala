@@ -27,6 +27,21 @@ class EXIO extends Bundle {
     val dbgFwdRs1 = Output(UInt(32.W))
     val dbgFwdRs2 = Output(UInt(32.W))
     val dbgOp2 = Output(UInt(32.W))
+
+    val predTaken = Input(Bool())
+    val predTarget = Input(UInt(32.W))
+    val redirectValid = Output(Bool())
+    val redirectTarget = Output(UInt(32.W))
+
+    val bpuUpdateValid = Output(Bool())
+    val bpuUpdatePC = Output(UInt(32.W))
+    val bpuUpdateTaken = Output(Bool())
+    val bpuUpdateTarget = Output(UInt(32.W))
+
+    val dbgBranchMispred = Output(Bool())
+    val dbgFalsePositive = Output(Bool())
+    val dbgTargetMismatch = Output(Bool())
+    val dbgIsJALR = Output(Bool())
 }
 
 class EX extends Module {
@@ -59,13 +74,33 @@ class EX extends Module {
 
     val doBranch = io.ctrl.branch && branchCond
     val doJump = io.ctrl.jump
-    io.branchTaken := doBranch || doJump
+    val actualTaken = doBranch || doJump
+    io.branchTaken := actualTaken
 
     val branchTarget = Mux(doJump && io.ctrl.aluSrc,
         (fwdRs1 + io.imm) & "hFFFFFFFE".U(32.W),
         io.pc + io.imm
     )
     io.branchTarget := branchTarget
+
+    val isBranchLike = io.ctrl.branch || io.ctrl.jump
+    val isJALR = doJump && io.ctrl.aluSrc
+    val branchMispred = isBranchLike && (io.predTaken =/= actualTaken)
+    val falsePositive = !isBranchLike && io.predTaken
+    val targetMismatch = actualTaken && io.predTaken && (io.predTarget =/= branchTarget) && !isJALR
+
+    io.redirectValid := branchMispred || falsePositive || isJALR || targetMismatch
+    io.redirectTarget := Mux(actualTaken, branchTarget, io.pc + 4.U)
+
+    io.dbgBranchMispred := branchMispred
+    io.dbgFalsePositive := falsePositive
+    io.dbgTargetMismatch := targetMismatch
+    io.dbgIsJALR := isJALR
+
+    io.bpuUpdateValid := isBranchLike || io.predTaken
+    io.bpuUpdatePC := io.pc
+    io.bpuUpdateTaken := actualTaken
+    io.bpuUpdateTarget := branchTarget
 
     val shamt = op2(4, 0)
 
