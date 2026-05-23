@@ -1,7 +1,7 @@
 package pokit.core
 
 import chisel3._
-import chisel3.util.log2Ceil
+import chisel3.util._
 
 class IMem(size: Int) extends Module {
     val io = IO(new Bundle {
@@ -26,6 +26,7 @@ class DMem(size: Int) extends Module {
     val io = IO(new Bundle {
         val addr = Input(UInt(32.W))
         val wen = Input(Bool())
+        val byteWen = Input(UInt(4.W))
         val wData = Input(UInt(32.W))
         val rData = Output(UInt(32.W))
         val initWen = Input(Bool())
@@ -41,7 +42,15 @@ class DMem(size: Int) extends Module {
     when(io.initWen) {
         mem(io.initAddr(addrBits + 1, 2)) := io.initData
     }.elsewhen(io.wen) {
-        mem(io.addr(addrBits + 1, 2)) := io.wData
+        val wordIdx = io.addr(addrBits + 1, 2)
+        val oldWord = mem(wordIdx)
+        val byteMask = Cat(
+            Fill(8, io.byteWen(3)),
+            Fill(8, io.byteWen(2)),
+            Fill(8, io.byteWen(1)),
+            Fill(8, io.byteWen(0))
+        )
+        mem(wordIdx) := (oldWord & ~byteMask) | (io.wData & byteMask)
     }
 
     io.rData := mem(io.addr(addrBits + 1, 2))

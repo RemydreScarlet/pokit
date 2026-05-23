@@ -9,6 +9,8 @@ class ControlBundle extends Bundle {
     val memRead = Bool()
     val memWrite = Bool()
     val memToReg = Bool()
+    val memSize = UInt(2.W) // 0: byte, 1: halfword, 2: word
+    val memSigned = Bool() // true: signed load (lb/lh), false: unsigned (lbu/lhu/sw)
     val branch = Bool()
     val jump = Bool()
 }

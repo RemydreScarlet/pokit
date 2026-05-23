@@ -49,6 +49,8 @@ class ID extends Module {
     io.ctrl.memRead  := false.B
     io.ctrl.memWrite := false.B
     io.ctrl.memToReg := false.B
+    io.ctrl.memSize  := 0.U
+    io.ctrl.memSigned := false.B
     io.ctrl.branch   := false.B
     io.ctrl.jump     := false.B
     io.ctrl.aluOp    := 0.U
@@ -116,19 +118,42 @@ class ID extends Module {
             io.ctrl.aluOp := Cat(0.U(1.W), funct3)
             io.imm := immB
         }
-        is("b0000011".U) { // LOAD
+        is("b0000011".U) { // LOAD: lb, lh, lw, lbu, lhu
             io.ctrl.regWrite := true.B
             io.ctrl.memRead := true.B
             io.ctrl.memToReg := true.B
             io.ctrl.aluSrc := true.B
             io.ctrl.aluOp := 0.U
             io.imm := immI
+            when(funct3 === "b000".U) { // lb
+                io.ctrl.memSize := 0.U
+                io.ctrl.memSigned := true.B
+            }.elsewhen(funct3 === "b001".U) { // lh
+                io.ctrl.memSize := 1.U
+                io.ctrl.memSigned := true.B
+            }.elsewhen(funct3 === "b010".U) { // lw
+                io.ctrl.memSize := 2.U
+                io.ctrl.memSigned := false.B
+            }.elsewhen(funct3 === "b100".U) { // lbu
+                io.ctrl.memSize := 0.U
+                io.ctrl.memSigned := false.B
+            }.elsewhen(funct3 === "b101".U) { // lhu
+                io.ctrl.memSize := 1.U
+                io.ctrl.memSigned := false.B
+            }
         }
-        is("b0100011".U) { // STORE
+        is("b0100011".U) { // STORE: sb, sh, sw
             io.ctrl.memWrite := true.B
             io.ctrl.aluSrc := true.B
             io.ctrl.aluOp := 0.U
             io.imm := immS
+            when(funct3 === "b000".U) { // sb
+                io.ctrl.memSize := 0.U
+            }.elsewhen(funct3 === "b001".U) { // sh
+                io.ctrl.memSize := 1.U
+            }.elsewhen(funct3 === "b010".U) { // sw
+                io.ctrl.memSize := 2.U
+            }
         }
         is("b0001111".U) { // FENCE
         }

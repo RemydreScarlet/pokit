@@ -122,6 +122,7 @@ class Pipeline extends Module {
     dmem.io.addr := memStage.io.memAddr
     dmem.io.wData := memStage.io.memWData
     dmem.io.wen := memStage.io.memWen
+    dmem.io.byteWen := memStage.io.memByteWen
     memStage.io.memRData := dmem.io.rData
 
     wbStage.io.aluOut := memStage.io.memOut

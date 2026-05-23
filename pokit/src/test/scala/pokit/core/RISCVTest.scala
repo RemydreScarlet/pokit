@@ -57,8 +57,6 @@ class RISCVTest extends AnyFlatSpec with ChiselScalatestTester {
     }
 
     val knownUnsupported = Set(
-        "rv32ui-p-lb", "rv32ui-p-lbu", "rv32ui-p-lh", "rv32ui-p-lhu",
-        "rv32ui-p-sb", "rv32ui-p-sh",
         "rv32ui-p-fence_i",
     )
 
