@@ -146,6 +146,11 @@ class CoreMarkTest extends AnyFlatSpec with ChiselScalatestTester {
             println("=======================")
             println(f"Cycles: $cycles")
 
+            // CoreMark/MHz = (iterations × 1,000,000) / total_cycles
+            val iterations = 1
+            val coremarkMhz = iterations.toDouble * 1000000.0 / cycles.toDouble
+            println(f"\n  CoreMark/MHz (1 iter): $coremarkMhz%.2f")
+
             assert(!timeout, s"CoreMark timed out after $maxCycles cycles")
             assert(signature == 1, s"CoreMark failed: signature=$signature (expected 1)")
         }
