@@ -9,6 +9,8 @@ class LwTest extends AnyFlatSpec with ChiselScalatestTester {
     "LW instruction" should "work" in {
         test(new Pipeline) { dut =>
             dut.io.testMode.poke(true.B)
+            dut.io.imemInitWen.poke(false.B)
+            dut.io.dmemInitWen.poke(false.B)
             dut.io.branchValid.poke(false.B)
             dut.io.initRegWen.poke(true.B)
             

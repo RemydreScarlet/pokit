@@ -3,7 +3,6 @@ package pokit.core.stage.register
 import chisel3._
 import pokit.core._
 
-// ID/EXステージ間のパイプラインレジスタ
 class IDEXReg extends Module {
     val io = IO(new Bundle {
         val inRs1 = Input(UInt(32.W))
@@ -11,20 +10,45 @@ class IDEXReg extends Module {
         val inImm = Input(UInt(32.W))
         val inCtrl = Input(new ControlBundle)
         val inRd = Input(UInt(6.W))
-        val inPc = Input(UInt(32.W)) // PCを追加
+        val inPc = Input(UInt(32.W))
+        val inRs1Addr = Input(UInt(5.W))
+        val inRs2Addr = Input(UInt(5.W))
+        val flush = Input(Bool())
 
         val outRs1 = Output(UInt(32.W))
         val outRs2 = Output(UInt(32.W))
         val outImm = Output(UInt(32.W))
         val outCtrl = Output(new ControlBundle)
         val outRd = Output(UInt(6.W))
-        val outPc = Output(UInt(32.W)) // PCを追加
+        val outPc = Output(UInt(32.W))
+        val outRs1Addr = Output(UInt(5.W))
+        val outRs2Addr = Output(UInt(5.W))
     })
 
-    io.outRs1 := RegNext(io.inRs1, 0.U)
-    io.outRs2 := RegNext(io.inRs2, 0.U)
-    io.outImm := RegNext(io.inImm, 0.U)
-    io.outCtrl := RegNext(io.inCtrl, 0.U.asTypeOf(new ControlBundle))
-    io.outRd := RegNext(io.inRd, 0.U)
-    io.outPc := RegNext(io.inPc, 0.U) // PCを追加
+    val rs1Reg = RegInit(0.U(32.W))
+    val rs2Reg = RegInit(0.U(32.W))
+    val immReg = RegInit(0.U(32.W))
+    val ctrlReg = RegInit(0.U.asTypeOf(new ControlBundle))
+    val rdReg = RegInit(0.U(6.W))
+    val pcReg = RegInit(0.U(32.W))
+    val rs1AddrReg = RegInit(0.U(5.W))
+    val rs2AddrReg = RegInit(0.U(5.W))
+
+    rs1Reg := Mux(io.flush, 0.U, io.inRs1)
+    rs2Reg := Mux(io.flush, 0.U, io.inRs2)
+    immReg := Mux(io.flush, 0.U, io.inImm)
+    ctrlReg := Mux(io.flush, 0.U.asTypeOf(new ControlBundle), io.inCtrl)
+    rdReg := Mux(io.flush, 0.U, io.inRd)
+    pcReg := Mux(io.flush, 0.U, io.inPc)
+    rs1AddrReg := Mux(io.flush, 0.U, io.inRs1Addr)
+    rs2AddrReg := Mux(io.flush, 0.U, io.inRs2Addr)
+
+    io.outRs1 := rs1Reg
+    io.outRs2 := rs2Reg
+    io.outImm := immReg
+    io.outCtrl := ctrlReg
+    io.outRd := rdReg
+    io.outPc := pcReg
+    io.outRs1Addr := rs1AddrReg
+    io.outRs2Addr := rs2AddrReg
 }

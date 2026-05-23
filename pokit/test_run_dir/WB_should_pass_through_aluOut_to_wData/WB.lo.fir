@@ -16,7 +16,22 @@ circuit WB :
     output io_wen : UInt<1> @[src/main/scala/pokit/core/stage/WB.scala 7:16]
     output io_wAddr : UInt<6> @[src/main/scala/pokit/core/stage/WB.scala 7:16]
     output io_wData : UInt<32> @[src/main/scala/pokit/core/stage/WB.scala 7:16]
+    output io_fwdWen : UInt<1> @[src/main/scala/pokit/core/stage/WB.scala 7:16]
+    output io_fwdAddr : UInt<6> @[src/main/scala/pokit/core/stage/WB.scala 7:16]
+    output io_fwdData : UInt<32> @[src/main/scala/pokit/core/stage/WB.scala 7:16]
 
-    io_wen <= io_ctrl_regWrite @[src/main/scala/pokit/core/stage/WB.scala 18:12]
-    io_wAddr <= io_rd @[src/main/scala/pokit/core/stage/WB.scala 19:14]
-    io_wData <= io_aluOut @[src/main/scala/pokit/core/stage/WB.scala 20:14]
+    reg io_fwdWen_REG : UInt<1>, clock with :
+      reset => (UInt<1>("h0"), io_fwdWen_REG) @[src/main/scala/pokit/core/stage/WB.scala 25:25]
+    reg io_fwdAddr_REG : UInt<6>, clock with :
+      reset => (UInt<1>("h0"), io_fwdAddr_REG) @[src/main/scala/pokit/core/stage/WB.scala 26:26]
+    reg io_fwdData_REG : UInt<32>, clock with :
+      reset => (UInt<1>("h0"), io_fwdData_REG) @[src/main/scala/pokit/core/stage/WB.scala 27:26]
+    io_wen <= io_ctrl_regWrite @[src/main/scala/pokit/core/stage/WB.scala 23:12]
+    io_wAddr <= io_rd @[src/main/scala/pokit/core/stage/WB.scala 21:14]
+    io_wData <= io_aluOut @[src/main/scala/pokit/core/stage/WB.scala 22:14]
+    io_fwdWen <= io_fwdWen_REG @[src/main/scala/pokit/core/stage/WB.scala 25:15]
+    io_fwdAddr <= io_fwdAddr_REG @[src/main/scala/pokit/core/stage/WB.scala 26:16]
+    io_fwdData <= io_fwdData_REG @[src/main/scala/pokit/core/stage/WB.scala 27:16]
+    io_fwdWen_REG <= mux(reset, UInt<1>("h0"), io_ctrl_regWrite) @[src/main/scala/pokit/core/stage/WB.scala 25:{25,25,25}]
+    io_fwdAddr_REG <= mux(reset, UInt<1>("h0"), io_rd) @[src/main/scala/pokit/core/stage/WB.scala 26:{26,26,26}]
+    io_fwdData_REG <= mux(reset, UInt<1>("h0"), io_aluOut) @[src/main/scala/pokit/core/stage/WB.scala 27:{26,26,26}]
