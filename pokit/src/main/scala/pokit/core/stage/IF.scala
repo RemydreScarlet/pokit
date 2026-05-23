@@ -20,6 +20,8 @@ class IF extends Module {
         val predictTarget = Input(UInt(32.W))
         val predOut = Output(Bool())
         val predTargetOut = Output(UInt(32.W))
+        val threadBlocked = Input(UInt(2.W))
+        val branchThreadIdx = Input(UInt(1.W))
     })
 
     val pc0 = RegInit(0.U(32.W))
@@ -31,14 +33,23 @@ class IF extends Module {
     val predictedNextPC = Mux(io.predictTaken, io.predictTarget, Mux(actualThreadIdx === 0.U, pc0, pc1) + 4.U)
 
     when(io.branchValid) {
-        when(actualThreadIdx === 0.U) { pc0 := io.branchPC }
+        when(io.branchThreadIdx === 0.U) { pc0 := io.branchPC }
         .otherwise { pc1 := io.branchPC }
     }.otherwise {
         when(actualThreadIdx === 0.U) { pc0 := predictedNextPC }
         .otherwise { pc1 := predictedNextPC }
     }
 
-    threadIdx := Mux(io.singleThread, 0.U, ~threadIdx)
+    val currentReady = !io.threadBlocked(actualThreadIdx)
+    val otherReady = !io.threadBlocked(~actualThreadIdx)
+
+    when(io.singleThread) {
+        threadIdx := 0.U
+    }.elsewhen(currentReady) {
+        threadIdx := actualThreadIdx
+    }.elsewhen(otherReady) {
+        threadIdx := ~actualThreadIdx
+    }
 
     val currentPC = Mux(actualThreadIdx === 0.U, pc0, pc1)
 

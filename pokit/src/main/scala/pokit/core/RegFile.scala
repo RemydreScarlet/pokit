@@ -25,17 +25,19 @@ class RegFile extends Module {
 
     val regs = Mem(64, UInt(32.W))
     
-    // Read
-    io.rData1 := Mux(io.rAddr1 === 0.U, 0.U, regs(io.rAddr1))
-    io.rData2 := Mux(io.rAddr2 === 0.U, 0.U, regs(io.rAddr2))
+    val isX0 = io.rAddr1 === 0.U || io.rAddr1 === 32.U
+    io.rData1 := Mux(isX0, 0.U, regs(io.rAddr1))
+    val isX0_2 = io.rAddr2 === 0.U || io.rAddr2 === 32.U
+    io.rData2 := Mux(isX0_2, 0.U, regs(io.rAddr2))
     
     // Debug Read
-    io.dbgData := Mux(io.dbgAddr === 0.U, 0.U, regs(io.dbgAddr))
+    val isX0_dbg = io.dbgAddr === 0.U || io.dbgAddr === 32.U
+    io.dbgData := Mux(isX0_dbg, 0.U, regs(io.dbgAddr))
     
     // Write (WB or Init)
-    when(io.wen && io.wAddr =/= 0.U) {
+    when(io.wen && io.wAddr =/= 0.U && io.wAddr =/= 32.U) {
         regs(io.wAddr) := io.wData
-    }.elsewhen(io.initWen && io.initAddr =/= 0.U) {
+    }.elsewhen(io.initWen && io.initAddr =/= 0.U && io.initAddr =/= 32.U) {
         regs(io.initAddr) := io.initData
     }
 }

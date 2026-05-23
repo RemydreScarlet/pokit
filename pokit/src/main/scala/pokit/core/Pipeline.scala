@@ -45,6 +45,7 @@ class Pipeline extends Module {
         val dbgRedirectFalsePos = Output(Bool())
         val dbgRedirectTargetMis = Output(Bool())
         val dbgRedirectJALR = Output(Bool())
+        val dbgThreadIdx = Output(UInt(1.W))
     })
 
     val ifStage = Module(new IF)
@@ -76,11 +77,13 @@ class Pipeline extends Module {
     ifStage.io.instr := Mux(io.testMode, io.instr, imem.io.instr)
 
     bpu.io.lookupPC := ifStage.io.pc
+    bpu.io.lookupThread := ifStage.io.instrOut.threadIdx
     ifStage.io.predictTaken := bpu.io.predictTaken
     ifStage.io.predictTarget := bpu.io.predictTarget
 
     ifStage.io.branchPC := Mux(exStage.io.redirectValid, exStage.io.redirectTarget, io.branchPC)
     ifStage.io.branchValid := exStage.io.redirectValid || io.branchValid
+    ifStage.io.branchThreadIdx := Mux(exStage.io.redirectValid, exStage.io.threadIdx, ifStage.io.instrOut.threadIdx)
     idStage.io.instrIn := ifStage.io.instrOut
 
     regFile.io.rAddr1 := idStage.io.rAddr1
@@ -104,8 +107,26 @@ class Pipeline extends Module {
     idexReg.io.inRs2Addr := idStage.io.rs2Addr
     idexReg.io.inPredTaken := ifStage.io.predOut
     idexReg.io.inPredTarget := ifStage.io.predTargetOut
+    idexReg.io.inThreadIdx := idStage.io.instrIn.threadIdx
 
-    idexReg.io.flush := exStage.io.redirectValid || io.branchValid
+    // Flush IDEX when the instruction in ID was fetched from the same thread
+    // that caused the redirect (wrong-path instruction).
+    // In single-thread mode this matches the old flush-on-redirect behavior.
+    // In multi-thread mode, the other thread's instruction is correctly fetched
+    // and should NOT be flushed.
+    idexReg.io.flush := io.branchValid || (exStage.io.redirectValid && exStage.io.threadIdx === idStage.io.instrIn.threadIdx)
+
+    // Per-thread memory pending tracking: mark thread blocked when ID decodes
+    // a LOAD/STORE, unblock when MEM completes.
+    val threadBlocked = RegInit(0.U(2.W))
+    val setThreadBlocked = Mux(idStage.io.ctrl.memRead || idStage.io.ctrl.memWrite,
+        1.U << idStage.io.instrIn.threadIdx, 0.U(2.W))
+    val clearThreadBlocked = Mux(memStage.io.ctrl.memRead || memStage.io.ctrl.memWrite,
+        1.U << exmemReg.io.outThreadIdx, 0.U(2.W))
+
+    threadBlocked := (threadBlocked | setThreadBlocked) & ~(clearThreadBlocked & ~setThreadBlocked)
+
+    ifStage.io.threadBlocked := threadBlocked
 
     exStage.io.pc := idexReg.io.outPc
     exStage.io.rs1 := idexReg.io.outRs1
@@ -114,6 +135,7 @@ class Pipeline extends Module {
     exStage.io.ctrl := idexReg.io.outCtrl
     exStage.io.rs1Addr := idexReg.io.outRs1Addr
     exStage.io.rs2Addr := idexReg.io.outRs2Addr
+    exStage.io.threadIdx := idexReg.io.outThreadIdx
     exStage.io.predTaken := idexReg.io.outPredTaken
     exStage.io.predTarget := idexReg.io.outPredTarget
 
@@ -129,6 +151,7 @@ class Pipeline extends Module {
 
     bpu.io.updateValid := exStage.io.bpuUpdateValid
     bpu.io.updatePC := exStage.io.bpuUpdatePC
+    bpu.io.updateThread := idexReg.io.outThreadIdx
     bpu.io.updateTaken := exStage.io.bpuUpdateTaken
     bpu.io.updateTarget := exStage.io.bpuUpdateTarget
 
@@ -136,6 +159,7 @@ class Pipeline extends Module {
     exmemReg.io.inRs2 := exStage.io.fwdRs2Out
     exmemReg.io.inRd := idexReg.io.outRd
     exmemReg.io.inCtrl := idexReg.io.outCtrl
+    exmemReg.io.inThreadIdx := idexReg.io.outThreadIdx
 
     memStage.io.aluOut := exmemReg.io.outAluOut
     memStage.io.rs2 := exmemReg.io.outRs2
@@ -172,4 +196,5 @@ class Pipeline extends Module {
     io.dbgRedirectFalsePos := exStage.io.dbgFalsePositive
     io.dbgRedirectTargetMis := exStage.io.dbgTargetMismatch
     io.dbgRedirectJALR := exStage.io.dbgIsJALR
+    io.dbgThreadIdx := ifStage.io.instrOut.threadIdx
 }

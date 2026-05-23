@@ -15,6 +15,7 @@ class IDEXReg extends Module {
         val inRs2Addr = Input(UInt(5.W))
         val inPredTaken = Input(Bool())
         val inPredTarget = Input(UInt(32.W))
+        val inThreadIdx = Input(UInt(1.W))
         val flush = Input(Bool())
 
         val outRs1 = Output(UInt(32.W))
@@ -27,6 +28,7 @@ class IDEXReg extends Module {
         val outRs2Addr = Output(UInt(5.W))
         val outPredTaken = Output(Bool())
         val outPredTarget = Output(UInt(32.W))
+        val outThreadIdx = Output(UInt(1.W))
     })
 
     val rs1Reg = RegInit(0.U(32.W))
@@ -39,6 +41,7 @@ class IDEXReg extends Module {
     val rs2AddrReg = RegInit(0.U(5.W))
     val predTakenReg = RegInit(false.B)
     val predTargetReg = RegInit(0.U(32.W))
+    val threadIdxReg = RegInit(0.U(1.W))
 
     rs1Reg := Mux(io.flush, 0.U, io.inRs1)
     rs2Reg := Mux(io.flush, 0.U, io.inRs2)
@@ -50,6 +53,7 @@ class IDEXReg extends Module {
     rs2AddrReg := Mux(io.flush, 0.U, io.inRs2Addr)
     predTakenReg := Mux(io.flush, false.B, io.inPredTaken)
     predTargetReg := Mux(io.flush, 0.U, io.inPredTarget)
+    threadIdxReg := Mux(io.flush, 0.U, io.inThreadIdx)
 
     io.outRs1 := rs1Reg
     io.outRs2 := rs2Reg
@@ -61,4 +65,5 @@ class IDEXReg extends Module {
     io.outRs2Addr := rs2AddrReg
     io.outPredTaken := predTakenReg
     io.outPredTarget := predTargetReg
+    io.outThreadIdx := threadIdxReg
 }

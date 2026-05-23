@@ -15,6 +15,7 @@ class EXIO extends Bundle {
     val branchTarget = Output(UInt(32.W))
     val rs1Addr = Input(UInt(5.W))
     val rs2Addr = Input(UInt(5.W))
+    val threadIdx = Input(UInt(1.W))
     val exmemRd = Input(UInt(6.W))
     val exmemAluOut = Input(UInt(32.W))
     val exmemRegWrite = Input(Bool())
@@ -49,13 +50,16 @@ class EX extends Module {
 
     val exmemFwdData = Mux(io.exmemMemToReg, io.memOut, io.exmemAluOut)
 
+    val fullRs1Addr = io.threadIdx ## io.rs1Addr
+    val fullRs2Addr = io.threadIdx ## io.rs2Addr
+
     val fwdRs1 = MuxCase(io.rs1, Seq(
-        (io.rs1Addr =/= 0.U && io.rs1Addr === io.exmemRd(4, 0) && io.exmemRegWrite) -> exmemFwdData,
-        (io.rs1Addr =/= 0.U && io.rs1Addr === io.wbRd(4, 0) && io.wbRegWrite) -> io.wbData
+        (io.rs1Addr =/= 0.U && fullRs1Addr === io.exmemRd && io.exmemRegWrite) -> exmemFwdData,
+        (io.rs1Addr =/= 0.U && fullRs1Addr === io.wbRd && io.wbRegWrite) -> io.wbData
     ))
     val fwdRs2 = MuxCase(io.rs2, Seq(
-        (io.rs2Addr =/= 0.U && io.rs2Addr === io.exmemRd(4, 0) && io.exmemRegWrite) -> exmemFwdData,
-        (io.rs2Addr =/= 0.U && io.rs2Addr === io.wbRd(4, 0) && io.wbRegWrite) -> io.wbData
+        (io.rs2Addr =/= 0.U && fullRs2Addr === io.exmemRd && io.exmemRegWrite) -> exmemFwdData,
+        (io.rs2Addr =/= 0.U && fullRs2Addr === io.wbRd && io.wbRegWrite) -> io.wbData
     ))
 
     val op2 = Mux(io.ctrl.aluSrc, io.imm, fwdRs2)
@@ -151,7 +155,6 @@ class EX extends Module {
     io.dbgFwdRs2 := fwdRs2
     io.dbgOp2 := op2
     io.aluOut := aluOut
-
 
 
 }

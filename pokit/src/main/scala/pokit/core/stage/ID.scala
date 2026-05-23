@@ -171,6 +171,15 @@ class ID extends Module {
         is("b0001111".U) { // FENCE
         }
         is("b1110011".U) { // SYSTEM (ECALL/EBREAK/CSR)
+            when(funct3 === "b010".U) { // CSRRS (read-only CSR)
+                val csrAddr = instr(31, 20)
+                when(csrAddr === "hF14".U) { // mhartid
+                    io.ctrl.regWrite := true.B
+                    io.ctrl.aluSrc := true.B
+                    io.ctrl.aluOp := 9.U // same as LUI: returns io.imm
+                    io.imm := Cat(0.U(31.W), io.instrIn.threadIdx)
+                }
+            }
         }
     }
 }

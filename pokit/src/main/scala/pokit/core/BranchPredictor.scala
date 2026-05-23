@@ -6,11 +6,13 @@ import chisel3.util._
 class BranchPredictor extends Module {
     val io = IO(new Bundle {
         val lookupPC = Input(UInt(32.W))
+        val lookupThread = Input(UInt(1.W))
         val predictTaken = Output(Bool())
         val predictTarget = Output(UInt(32.W))
 
         val updateValid = Input(Bool())
         val updatePC = Input(UInt(32.W))
+        val updateThread = Input(UInt(1.W))
         val updateTaken = Input(Bool())
         val updateTarget = Input(UInt(32.W))
 
@@ -21,12 +23,12 @@ class BranchPredictor extends Module {
     val idxBits = log2Ceil(numEntries)
 
     val valid  = RegInit(VecInit(Seq.fill(numEntries)(false.B)))
-    val tag    = Reg(Vec(numEntries, UInt((32 - idxBits - 2).W)))
+    val tag    = Reg(Vec(numEntries, UInt((32 - idxBits - 2 + 1).W))) // +1 for thread bit
     val target = Reg(Vec(numEntries, UInt(32.W)))
     val cnt    = RegInit(VecInit(Seq.fill(numEntries)(0.U(2.W))))
 
     val lookupIdx = io.lookupPC(idxBits + 1, 2)
-    val lookupTag = io.lookupPC(31, idxBits + 2)
+    val lookupTag = io.lookupThread ## io.lookupPC(31, idxBits + 2)
     val lookupHit = valid(lookupIdx) && tag(lookupIdx) === lookupTag
     val predTaken = lookupHit && cnt(lookupIdx)(1)
     io.predictTaken := predTaken
@@ -35,7 +37,7 @@ class BranchPredictor extends Module {
 
     when(io.updateValid) {
         val updIdx = io.updatePC(idxBits + 1, 2)
-        val updTag = io.updatePC(31, idxBits + 2)
+        val updTag = io.updateThread ## io.updatePC(31, idxBits + 2)
 
         valid(updIdx) := true.B
         tag(updIdx) := updTag
