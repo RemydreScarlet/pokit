@@ -18,6 +18,13 @@ project/project/
 *~
 *.swp
 
+# Chisel generated artifacts
+test_run_dir/
+*.fir
+*.v
+*.json
+*.anno.json
+
 # Build tool caches
 .ivy2/
 .sbt/
