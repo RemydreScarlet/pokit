@@ -52,13 +52,14 @@ class ${name}Test extends AnyFlatSpec with ChiselScalatestTester {
             dut.clock.step()
             dut.io.initRegWen.poke(false.B)
             
+            // $instr x1, x2, x3
             // TODO: Update machine code for $instr
             val instr = "h00000000".U 
             dut.io.instr.poke(instr)
             
             dut.clock.step(6)
             
-            // TODO: Add verification
+            // TODO: Add verification (e.g., check x1 via dbgRegData)
         }
     }
 }

@@ -6,15 +6,15 @@ import org.scalatest.flatspec.AnyFlatSpec
 import pokit.core.Pipeline
 
 class SraTest extends AnyFlatSpec with ChiselScalatestTester {
-    "SRA instruction" should "work" in {
+    "SRA instruction" should "shift right arithmetic" in {
         test(new Pipeline) { dut =>
             dut.io.testMode.poke(true.B)
             dut.io.imemInitWen.poke(false.B)
             dut.io.dmemInitWen.poke(false.B)
             dut.io.branchValid.poke(false.B)
             dut.io.initRegWen.poke(true.B)
-            
-            // Initialization for test
+
+            // x2 = 10, x3 = 20
             dut.io.initRegAddr.poke(2.U)
             dut.io.initRegData.poke(10.U)
             dut.clock.step()
@@ -22,14 +22,15 @@ class SraTest extends AnyFlatSpec with ChiselScalatestTester {
             dut.io.initRegData.poke(20.U)
             dut.clock.step()
             dut.io.initRegWen.poke(false.B)
-            
-            // TODO: Update machine code for SRA
-            val instr = "h00000000".U 
+
+            // SRA x1, x2, x3 -> 0x403150b3
+            val instr = "h403150b3".U
             dut.io.instr.poke(instr)
-            
+
             dut.clock.step(6)
-            
-            // TODO: Add verification
+
+            dut.io.dbgRegAddr.poke(1.U)
+            dut.io.dbgRegData.expect(0.U)
         }
     }
 }

@@ -42,6 +42,8 @@ class ${name}Test extends AnyFlatSpec with ChiselScalatestTester {
     "$instr instruction" should "work" in {
         test(new Pipeline) { dut =>
             // TODO: Implement test for $instr
+            // Add testMode, imemInitWen, dmemInitWen, branchValid setup
+            // Initialize registers, poke instruction, run pipeline, verify result
         }
     }
 }

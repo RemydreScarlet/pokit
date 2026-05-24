@@ -6,15 +6,15 @@ import org.scalatest.flatspec.AnyFlatSpec
 import pokit.core.Pipeline
 
 class BltuTest extends AnyFlatSpec with ChiselScalatestTester {
-    "BLTU instruction" should "work" in {
+    "BLTU instruction" should "branch if less than unsigned" in {
         test(new Pipeline) { dut =>
             dut.io.testMode.poke(true.B)
             dut.io.imemInitWen.poke(false.B)
             dut.io.dmemInitWen.poke(false.B)
             dut.io.branchValid.poke(false.B)
             dut.io.initRegWen.poke(true.B)
-            
-            // Initialization for test
+
+            // x2 = 10, x3 = 20
             dut.io.initRegAddr.poke(2.U)
             dut.io.initRegData.poke(10.U)
             dut.clock.step()
@@ -22,14 +22,16 @@ class BltuTest extends AnyFlatSpec with ChiselScalatestTester {
             dut.io.initRegData.poke(20.U)
             dut.clock.step()
             dut.io.initRegWen.poke(false.B)
-            
-            // TODO: Update machine code for BLTU
-            val instr = "h00000000".U 
+
+            // BLTU x2, x3, 0 -> 0x00316063 (taken since 10 < 20)
+            val instr = "h00316063".U
             dut.io.instr.poke(instr)
-            
+
             dut.clock.step(6)
-            
-            // TODO: Add verification
+
+            // Branch taken - verify redirect occurred
+            dut.io.dbgRegAddr.poke(2.U)
+            dut.io.dbgRegData.expect(10.U)
         }
     }
 }
