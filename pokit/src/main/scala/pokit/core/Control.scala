@@ -13,4 +13,5 @@ class ControlBundle extends Bundle {
     val memSigned = Bool() // true: signed load (lb/lh), false: unsigned (lbu/lhu/sw)
     val branch = Bool()
     val jump = Bool()
+    val amoOp = UInt(5.W) // funct5 for A-extension (LR/SC/AMO)
 }

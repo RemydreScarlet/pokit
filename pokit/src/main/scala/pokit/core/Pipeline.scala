@@ -164,12 +164,45 @@ class Pipeline extends Module {
     memStage.io.aluOut := exmemReg.io.outAluOut
     memStage.io.rs2 := exmemReg.io.outRs2
     memStage.io.ctrl := exmemReg.io.outCtrl
+    memStage.io.threadIdx := exmemReg.io.outThreadIdx
 
     dmem.io.addr := memStage.io.memAddr
     dmem.io.wData := memStage.io.memWData
     dmem.io.wen := memStage.io.memWen
     dmem.io.byteWen := memStage.io.memByteWen
     memStage.io.memRData := dmem.io.rData
+
+    // A-extension: reservation management (per-thread)
+    val lrValid = RegInit(0.U(2.W))
+    val lrAddr0 = RegInit(0.U(32.W))
+    val lrAddr1 = RegInit(0.U(32.W))
+    val currMemThread = exmemReg.io.outThreadIdx
+    val currLrAddr = Mux(currMemThread === 0.U, lrAddr0, lrAddr1)
+
+    memStage.io.lrValid := lrValid(currMemThread)
+    // Also pass sibling's lrAddr for write-monitor
+    val siblingLrAddr = Mux(currMemThread === 0.U, lrAddr1, lrAddr0)
+
+    // LR.W: set reservation for current thread
+    when(memStage.io.lrSet) {
+        when(currMemThread === 0.U) { lrAddr0 := memStage.io.lrAddr }
+        .otherwise { lrAddr1 := memStage.io.lrAddr }
+        lrValid := lrValid | (1.U << currMemThread)
+    }
+
+    // SC.W: always clear current thread's reservation
+    when(memStage.io.scExe) {
+        lrValid := lrValid & ~(1.U << currMemThread)
+    }
+
+    // Any write hitting a reserved address clears all reservations
+    when(memStage.io.writeActive) {
+        val hit0 = (memStage.io.writeAddr === lrAddr0) && lrValid(0)
+        val hit1 = (memStage.io.writeAddr === lrAddr1) && lrValid(1)
+        when(hit0 || hit1) {
+            lrValid := 0.U
+        }
+    }
 
     wbStage.io.aluOut := memStage.io.memOut
     wbStage.io.rd := exmemReg.io.outRd

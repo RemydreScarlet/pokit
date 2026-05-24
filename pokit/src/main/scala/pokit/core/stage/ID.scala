@@ -54,6 +54,7 @@ class ID extends Module {
     io.ctrl.branch   := false.B
     io.ctrl.jump     := false.B
     io.ctrl.aluOp    := 0.U
+    io.ctrl.amoOp    := 0.U
 
     io.imm := immI
 
@@ -169,6 +170,28 @@ class ID extends Module {
             }
         }
         is("b0001111".U) { // FENCE
+        }
+        is("b0101111".U) { // A-extension: LR.W / SC.W / AMO
+            val funct5 = instr(31, 27)
+            io.ctrl.amoOp := funct5
+            io.ctrl.memSize := 2.U // word
+            io.ctrl.aluSrc := true.B
+            io.ctrl.aluOp := 0.U
+            io.imm := 0.U
+            when(funct5 === "b00010".U) { // LR.W
+                io.ctrl.memRead := true.B
+                io.ctrl.regWrite := true.B
+                io.ctrl.memToReg := true.B
+            }.elsewhen(funct5 === "b00011".U) { // SC.W
+                io.ctrl.memWrite := true.B
+                io.ctrl.regWrite := true.B
+                io.ctrl.memToReg := true.B
+            }.otherwise { // AMO: AMOADD, AMOSWAP, AMOXOR, AMOAND, AMOOR, AMOMIN, etc.
+                io.ctrl.memRead := true.B
+                io.ctrl.memWrite := true.B
+                io.ctrl.regWrite := true.B
+                io.ctrl.memToReg := true.B
+            }
         }
         is("b1110011".U) { // SYSTEM (ECALL/EBREAK/CSR)
             when(funct3 === "b010".U) { // CSRRS (read-only CSR)
